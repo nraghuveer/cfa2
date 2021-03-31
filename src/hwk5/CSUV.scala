@@ -2,8 +2,43 @@ package hwk5
 import common._
 
 
+case class Context(call_strings: List[Long]) {
+  val k = 2
+  def extend(label: Long) = {
+    val x = call_strings ++ List(label)
+    Context(if (x.length > k) x.drop(1) else x)
+  }
+  override def toString = "[" + call_strings.mkString(",") + "]"
+}
+
+
+case class CSVars(vars: Set[(Context, String)]) extends Lattice[CSVars] {
+  def lub(that: CSVars) = CSVars(vars.union(that.vars))
+
+  val contexts = vars.map(x=>x._1).toSet
+
+  def variables(ctx: Context) = vars.filter(x => x._1 == ctx).map(x=>x._2)
+
+  def initialized(e: Expression, ctx: Context) = Util.fv(e).intersect(variables(ctx)).isEmpty
+
+  def kill_gen(y: String, e: Expression) = {
+    val gen = for(ctx <- contexts; if initialized(e, ctx)) yield (ctx, y)
+    val kill = for(ctx <- contexts; if ! initialized(e, ctx)) yield (ctx, y)
+    CSVars(vars -- kill ++ gen)
+  }
+
+  def gen(y: String) = CSVars(vars ++ contexts.map(ctx => (ctx, y)))
+
+  def gen(ys: List[String]) = CSVars(vars ++ contexts.flatMap(ctx => ys.map(y=>(ctx, y))))
+
+  def extend(lc: Long) = CSVars(contexts.map(ctx => ctx.extend(lc)).toSet.map((ctx: Context) => (ctx, Util.zero)))
+
+  override def toString = "{"+vars.toList.sortBy(x=>x._2).mkString(", ")+"}"
+}
+
+
 // uninitialized variables: forward and may analysis
-case class CSUV(stmt: Statement) extends Analysis[Vars] {
+case class UV(stmt: Statement) extends Analysis[Vars] {
   val cfg = ForwardCFG(stmt)
   val entry = real_entry
   val exit = real_exit
@@ -11,7 +46,7 @@ case class CSUV(stmt: Statement) extends Analysis[Vars] {
   val extremalValue = Vars(Util.vars(stmt))
   val bottom = Vars(Set())
 
-  def transfer(node: Node, l: Vars) = node match {  // l -> list of variables in the node
+  def transfer(node: Node, l: Vars) = node match {
     case IntraNode(stmt) => transfer(stmt, l)
 
     // for each parameter p, if its argument is not initialized, then p is not initialized
@@ -42,7 +77,7 @@ case class CSUV(stmt: Statement) extends Analysis[Vars] {
 
       def h(x: String) = Vars(if (l.vars.contains(Util.ret)) lc.vars + x else lc.vars - x)
 
-      stmt match {
+      stmt match {  // x is left hand side variable
         case ExprStmt(AssignExpr(_, LVarRef(x), FuncCall(_, _))) => h(x) // x = f(e);
         case VarDeclStmt(IntroduceVar(x), FuncCall(_, _)) => h(x)    // var x = f(e);
         case _ => lc // f(e);

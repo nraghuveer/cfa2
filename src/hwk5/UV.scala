@@ -1,6 +1,6 @@
 package hwk5
 
-import common._ 
+import common._
 
 // set of variables that may be uninitialized
 case class Vars(vars: Set[String]) extends Lattice[Vars] {
@@ -14,7 +14,7 @@ case class UV(stmt: Statement) extends Analysis[Vars] {
   val cfg = ForwardCFG(stmt)
   val entry = real_entry
   val exit = real_exit
-  
+
   val extremalValue = Vars(Util.vars(stmt))
   val bottom = Vars(Set())
   
@@ -49,7 +49,7 @@ case class UV(stmt: Statement) extends Analysis[Vars] {
       
       def h(x: String) = Vars(if (l.vars.contains(Util.ret)) lc.vars + x else lc.vars - x)
       
-      stmt match { 
+      stmt match {  // x is left hand side variable
         case ExprStmt(AssignExpr(_, LVarRef(x), FuncCall(_, _))) => h(x) // x = f(e);
         case VarDeclStmt(IntroduceVar(x), FuncCall(_, _)) => h(x)    // var x = f(e);
         case _ => lc // f(e);
