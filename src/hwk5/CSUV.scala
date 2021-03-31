@@ -73,7 +73,9 @@ case class UV(stmt: Statement) extends Analysis[Vars] {
       l.gen((Util.vars(stmt) -- ps.map(p=>p.str) + Util.ret).toList) // uninitialized parameters + all local variables (minus parameters) + return variable
     }
 
-    case ExitNode(Some(_)) => Vars(l.vars.intersect(Set(Util.ret))) // keep the return variable if it is present
+    case ExitNode(Some(_)) => {
+      l.vars.filter(x=> x._2 == Util.ret)
+    } // keep the return variable if it is present
 
     case n@RetNode(stmt, _) => {
       val lc = entry(cfg.call_ret(n))  // dataflow facts before the call
