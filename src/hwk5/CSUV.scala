@@ -46,7 +46,7 @@ case class UV(stmt: Statement) extends Analysis[Vars] {
   val extremalValue = Vars(Util.vars(stmt))
   val bottom = Vars(Set())
 
-  def transfer(node: Node, l: Vars) = node match {
+  def transfer(node: Node, l: CSVars) = node match {
     case IntraNode(stmt) => transfer(stmt, l)
 
     // for each parameter p, if its argument is not initialized, then p is not initialized
@@ -54,8 +54,11 @@ case class UV(stmt: Statement) extends Analysis[Vars] {
       def h(args: List[Expression]) = {
         val Some(FunctionDecl(_, FunctionExpr(_, ps, _))) = to.f
         val params = ps.map(p => p.str)
-        val s = for((p, e) <- params zip args; if initialized(e, l)) yield p
-        Vars(params.toSet -- s)     // function f(x, y) { ... }   f(10);
+        val initliazed_vars: Map[Context, List[String]] = l.contexts.map(c => (c, for((p, e) <- params zip args; if initialized(e, l, c)) yield p)).toMap
+        val ctx = l.extend(stmt.id).gen(params)
+        // kill the variables that initialized in all contexts
+        ctx.vars.filter(x => !initliazed_vars(x._1).contains(x._2))
+        ctx
       }
 
       stmt match {
@@ -67,7 +70,7 @@ case class UV(stmt: Statement) extends Analysis[Vars] {
     }
     // add variables appearing in the body of the function and the return variable
     case EntryNode(Some(FunctionDecl(_, FunctionExpr(_,ps,stmt)))) => {
-      Vars(l.vars ++ (Util.vars(stmt) -- ps.map(p=>p.str)) + Util.ret) // uninitialized parameters + all local variables (minus parameters) + return variable
+      l.gen((Util.vars(stmt) -- ps.map(p=>p.str) + Util.ret).toList) // uninitialized parameters + all local variables (minus parameters) + return variable
     }
 
     case ExitNode(Some(_)) => Vars(l.vars.intersect(Set(Util.ret))) // keep the return variable if it is present
@@ -88,7 +91,7 @@ case class UV(stmt: Statement) extends Analysis[Vars] {
   }
 
   // are variables in 'e' all initialized
-  def initialized(e: Expression, l: Vars) = Util.fv(e).intersect(l.vars).isEmpty
+  def initialized(e: Expression, l: CSVars, ctx: Context): Boolean = l.variables(ctx).intersect(Util.fv(e)).isEmpty
 
   def transfer(stmt: Statement, l: Vars) = {
     def kill_gen(y: String, e: Expression) = Vars(if (initialized(e, l)) l.vars - y else l.vars + y)
