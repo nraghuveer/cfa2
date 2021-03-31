@@ -6,17 +6,17 @@ import common.GenerateAST
  
 
 object Main {
-  def main(args: Array[String]) { 
+  def main(args: Array[String]) {
     val ast = GenerateAST(new File("test/uv.js"))
-	  
-    ast.prep 
+
+    ast.prep
     ast.buildGraph(Map())
-     
-    val a = UV(ast)
-//    val a = CSUV(ast)
-    
+
+//    val a = UV(ast)
+    val a = CSUV(ast)
+
     a.worklist
-    println(a) 
+    println(a)
     println
     print(a.toDotGraph)
   }
