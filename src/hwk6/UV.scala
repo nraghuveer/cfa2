@@ -56,10 +56,11 @@ case class UV_IFDS(stmt: Statement) extends Analysis[Vars] {
     
     case n@RetNode(stmt, _) => {
       val lc = entry(cfg.call_ret(n))  // dataflow facts before the call
+      val lx = exit(cfg.call_ret(n))  // dataflow facts at the exit of the call node (i.e. input of the function entry)
       
       def h(x: String) = {
-        // Vars(if (l.vars.contains(Util.ret)) lc.vars + x else lc.vars - x)
-        Vars(if (lc.vars.map(_._2).contains(Util.ret)) lc.vars ++ Set((Util.zero, x)) else lc.vars -- Set((Util.zero, x)))
+        Vars(if (!l.vars.filter(x => x._2 == Util.ret && lx.vars.contains((Util.zero, x._1))).isEmpty) lc.vars ++ Set((Util.zero, x))
+              else lc.vars -- Set((Util.zero, x)))
       }
       
       stmt match { 
