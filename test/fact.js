@@ -7,6 +7,6 @@ function fact(n) {
 	return n * a;
 }
 
-var x = fact(10); // { w, y }
+var x = fact(10);  
 
-var y = fact(w); // { w, y }
+var y = fact(y); 

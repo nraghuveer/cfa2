@@ -22,8 +22,8 @@ case class CSVars(vars: Set[(Context, String)]) extends Lattice[CSVars] {
   def initialized(e: Expression, ctx: Context) = Util.fv(e).intersect(variables(ctx)).isEmpty
 
   def kill_gen(y: String, e: Expression) = {
-    val gen = for(ctx <- contexts; if initialized(e, ctx)) yield (ctx, y)
-    val kill = for(ctx <- contexts; if ! initialized(e, ctx)) yield (ctx, y)
+    val gen = for(ctx <- contexts; if ! initialized(e, ctx)) yield (ctx, y)
+    val kill = for(ctx <- contexts; if initialized(e, ctx)) yield (ctx, y)
     CSVars(vars -- kill ++ gen)
   }
 

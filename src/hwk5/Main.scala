@@ -7,7 +7,7 @@ import common.GenerateAST
 
 object Main {
   def main(args: Array[String]) {
-    val ast = GenerateAST(new File("test/uv.js"))
+    val ast = GenerateAST(new File("test/uv1.js"))
 
     ast.prep
     ast.buildGraph(Map())

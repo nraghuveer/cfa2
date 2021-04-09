@@ -1,0 +1,22 @@
+
+package hwk6;
+
+import java.io.File
+import common.GenerateAST
+ 
+
+object Main {
+  def main(args: Array[String]) { 
+    val ast = GenerateAST(new File("test/uv.js"))
+	  
+    ast.prep 
+    ast.buildGraph(Map())
+      
+    val a = UV_IFDS(ast)
+    
+    a.worklist
+    println(a) 
+    println
+    print(a.toDotGraph)
+  }
+}
