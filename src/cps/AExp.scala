@@ -133,9 +133,10 @@ object CPS {
       case WhileStmt(cond, body) => {
         val c = KVar(gensym("k"))
         // add break continuation
-        val bc = KVar(gensym("k")) // TODO: add klam here, not just kvar
-        val bc_Klet = KLet(bc, KLam(UVar(gensym("u")), k(Void)), k(Void))
-        KLet(c, KLam(UVar(gensym("u")), t_k(cond, b=> If(b, t_c(body, kmap ++ Map(("break", bc)), c), k(Void)))), KApp(c, Void))
+        val break_kvar = KVar(gensym("k"))
+        val continue_kvar = KVar(gensym("k"))
+        val loop_klet = KLet(c, KLam(UVar(gensym("u")), t_k(cond, b=> If(b, t_c(body, kmap ++ Map(("break", break_kvar)), c), k(Void)))), KApp(c, Void))
+        KLet(break_kvar, KLam(UVar(gensym("u")), k(Void)), loop_klet)
       }
       case VarDeclListStmt(decls) => t_k(decls, kmap, k)
       case IfStmt(cond, thenPart, elsePart) => {  
