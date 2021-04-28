@@ -76,6 +76,20 @@ object AssignOp extends Enumeration {
   val OpAssignDiv=Value("/=");     val OpAssignMod=Value("%="); 
   val OpAssignLShift=Value("<<="); val OpAssignSpRShift=Value(">>="); val OpAssignZfRShift=Value(">>>="); 
   val OpAssignBAnd=Value("&=");    val OpAssignBXor=Value("^=");      val OpAssignBOr=Value("|=");
+  
+  import InfixOp._
+  def toOp(x: AssignOp) = x match {
+    case OpAssignAdd => OpAdd
+    case OpAssignSub => OpSub
+    case OpAssignMul => OpMul
+    case OpAssignDiv => OpDiv
+    case OpAssignLShift => OpLShift
+    case OpAssignSpRShift => OpSpRShift
+    case OpAssignZfRShift => OpZfRShift
+    case OpAssignBAnd => OpBAnd
+    case OpAssignBXor => OpBXor
+    case OpAssignBOr => OpBOr
+  }
 }
 
 object UnaryAssignOp extends Enumeration {

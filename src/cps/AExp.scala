@@ -1,4 +1,5 @@
 package cps
+
 import common.InfixOp._
 import common.AssignOp._
 import common._
@@ -36,7 +37,7 @@ trait Exp {
     case Bool(x) => ""+x
     case Void => "null"
     case KLam(x, e) => s"$x => {\n$e\n$space}"
-    case ULam(xs, k, e) => s"(${(xs++List(k)).mkString(", ")}) => {\n$e\n$space\}" 
+    case ULam(xs, k, e) => s"(${(xs++List(k)).mkString(", ")}) => {\n$e\n$space}"
     case Prim(op, e1, e2) => s"$e1 $op $e2"
     case KLet(x, e1, e) => s"${space}let $x = $e1\n$e"
     case ULet(x, e1, e) => s"${space}let $x = $e1\n$e"
@@ -65,7 +66,7 @@ trait CExp extends Exp // complex expression
 trait AExp extends BExp // atomic expression   
 case class KVar (x: String) extends Exp // continuation variable
 case class UVar (x: String) extends AExp // user variable
-case class KLam (x: UVar, e: CExp) extends Exp // continuation lambda 
+case class KLam (x: UVar, e: CExp) extends Exp // continuation lambda
 case class ULam (xs: List[UVar], k: KVar, e: CExp) extends AExp // user lambda
 case class Num (x: Double) extends AExp
 case class Str (x: String) extends AExp
@@ -128,6 +129,13 @@ object CPS {
       case VarDeclStmt(x, e) => {
         val y = UVar(x.str)
         t_k_prim(e, z => ULet(y, z, k(y)))
+      }
+      case WhileStmt(cond, body) => {
+        val c = KVar(gensym("k"))
+        // add break continuation
+        val bc = KVar(gensym("k")) // TODO: add klam here, not just kvar
+        val bc_Klet = KLet(bc, KLam(UVar(gensym("u")), k(Void)), k(Void))
+        KLet(c, KLam(UVar(gensym("u")), t_k(cond, b=> If(b, t_c(body, kmap ++ Map(("break", bc)), c), k(Void)))), KApp(c, Void))
       }
       case VarDeclListStmt(decls) => t_k(decls, kmap, k)
       case IfStmt(cond, thenPart, elsePart) => {  
@@ -197,7 +205,7 @@ object CPS {
 
 object Main {
   def main(args: Array[String]) { 
-    val ast = GenerateAST(new File("test/fact4.js"))
+    val ast = GenerateAST(new File("test/fact3.js"))
     val cps = CPS.t_c(ast, Map(), KVar("halt"))   
     cps.prep
     println("let halt = x => console.log(x)\n")

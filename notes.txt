@@ -1,0 +1,10 @@
+t_k -> transformation for non-tail recursive statement/expression
+
+t_c -> transformation for tail recursive statement/expression
+
+m -> take care of atomic expressions
+
+
+
+
+
