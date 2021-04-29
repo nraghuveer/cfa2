@@ -131,12 +131,19 @@ object CPS {
         t_k_prim(e, z => ULet(y, z, k(y)))
       }
       case WhileStmt(cond, body) => {
-        val c = KVar(gensym("k"))
-        // add break continuation
+        val loop_kvar = KVar(gensym("k"))
         val break_kvar = KVar(gensym("k"))
         val continue_kvar = KVar(gensym("k"))
-        val loop_klet = KLet(c, KLam(UVar(gensym("u")), t_k(cond, b=> If(b, t_c(body, kmap ++ Map(("break", break_kvar)), c), k(Void)))), KApp(c, Void))
-        KLet(break_kvar, KLam(UVar(gensym("u")), k(Void)), loop_klet)
+        val kkmap = kmap ++ Map(("break", break_kvar), ("continue", continue_kvar))
+
+        val loop_cexp = t_k(cond, b=> If(b, t_c(body, kkmap, loop_kvar), k(Void)))
+        // add break continuation
+        val loop_klet = KLet(loop_kvar, KLam(UVar(gensym("u")), loop_cexp), KApp(loop_kvar, Void))
+        val break_klet = KLet(break_kvar, KLam(UVar(gensym("u")), k(Void)), loop_klet)
+        KLet(continue_kvar, KLam(UVar(gensym("u")), KApp(loop_kvar, Void)), break_klet)
+
+
+
       }
       case VarDeclListStmt(decls) => t_k(decls, kmap, k)
       case IfStmt(cond, thenPart, elsePart) => {  
@@ -206,7 +213,7 @@ object CPS {
 
 object Main {
   def main(args: Array[String]) { 
-    val ast = GenerateAST(new File("test/fact3.js"))
+    val ast = GenerateAST(new File("test/fact4.js"))
     val cps = CPS.t_c(ast, Map(), KVar("halt"))   
     cps.prep
     println("let halt = x => console.log(x)\n")
