@@ -1,13 +1,12 @@
 
 function fact(n) {
-	if (n <= 1) {
-		return 1;
-	}
-	else {
-		return n*fact(n-1);
-	}
+	var a = 1;
+	
+	if (n > 1) a = fact(n-1);
+	
+	return n * a;
 }
 
-var x = fact(3);  
+var x = fact(10);  
 
-fact(x) 
+var y = fact(y); 
