@@ -125,7 +125,10 @@ object CPS {
           case UApp(f, args, k, label) => TcUApp(f, args, k, label)
           case ULet(x, e1, UApp(f, args, k, label)) => ULet(x, e1, TcUApp(f, args, k, label))
           case _ => k(x)
-        }), h(c))
+        }), h(c) match {
+          case ULet(x, e1, UApp(f, args, k, label)) => ULet(x, e1, TcUApp(f, args, k, label))
+          case _ => h(c)
+        })
     	}
     }
   }
