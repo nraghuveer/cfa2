@@ -121,11 +121,11 @@ object CPS {
       }
     	case _ => {
         val c = KVar(gensym("k"))
-        KLet(c, KLam(x, k(x)), h(c) match {
+        KLet(c, KLam(x, k(x) match { // Inner kApp can be a tail call of the uapp, so convert it too
           case UApp(f, args, k, label) => TcUApp(f, args, k, label)
           case ULet(x, e1, UApp(f, args, k, label)) => ULet(x, e1, TcUApp(f, args, k, label))
-          case _ => h(c)
-        })
+          case _ => k(x)
+        }), h(c))
     	}
     }
   }
