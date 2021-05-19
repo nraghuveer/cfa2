@@ -100,25 +100,41 @@ object CPS {
   def gensym(x: String) = { var_count = var_count + 1; x + var_count }
   var lab_count = 0
   def label = { lab_count = lab_count + 1; lab_count }
-  def halt = KVar("halt")
+def halt = KVar("halt")
 
-  def getAllVars(exp: Exp): List[String] = {
+  def matchUVar(x: AExp): Set[String] = x match {
+    case UVar(x) => Set(x)
+    case _ => Set()
+  }
+
+  def getHeapVars(exp: Exp): Set[String] = {
     exp match {
-      case UVar(x: String) => List(x)
-      case KVar(_) => List()
-      case KLam(_, e) => getAllVars(e)
-      case ULam(xs, _, e) => xs.map(x => x.x) ++ getAllVars(e)
-      case KApp(_, arg, _) => getAllVars(arg)
-      case UApp(f, args, _, _) => args.map(i => getAllVars(i)).flatten
-      case TcUApp(f, args, _, _) => args.map(i => getAllVars(i)).flatten
-      case KLet(_, e1, e) => getAllVars(e1) ++ getAllVars(e)
-      case ULet(x, e1, e) => List(x.x) ++ getAllVars(e1) ++ getAllVars(e)
-      case If(b, theen, els) => getAllVars(b) ++ getAllVars(theen) ++ getAllVars(els)
-      case Update(x, e2, e) => getAllVars(x) ++ getAllVars(e2) ++ getAllVars(e)
-      case Fun(_, ulam) => getAllVars(ulam)
-      case Prim(op, e1, e2) => getAllVars(e1) ++ getAllVars(e2)
-      case Begin(fs, e) => fs.map(getAllVars(_)).flatten ++ getAllVars(e)
-      case _ => List()
+      case Fun(_, lam@ULam(xs, _, ULet(_, uletE1, uletE))) =>{
+        // get the variable references from the lambda?
+      }
+    }
+  }
+
+  def getAllVarReferences(exp: Exp): Set[String] = {
+    exp match {
+      case KLam(UVar(_), e) => getAllVarReferences(e)
+      case ULam(_, _, e) => getAllVarReferences(e)
+      case KApp(_, arg, _) =>  arg match {
+        case UVar(x) => Set(x)
+        case _ => Set()
+      }
+      case UApp(_, args, _, _) => args.map(i => matchUVar(i)).flatten.toSet
+      case TcUApp(_, args, _, _) => args.map(i => matchUVar(i)).flatten.toSet
+      case KLet(_, KLam(_, klamE), e) => getAllVarReferences(klamE) ++ getAllVarReferences(e)
+      case ULet(_, e1, e) => getAllVarReferences(e1) ++ getAllVarReferences(e)
+      case If(_, theen, els) => getAllVarReferences(theen) ++ getAllVarReferences(els)
+      case Update(_, e2, e) => getAllVarReferences(e2) ++ getAllVarReferences(e)
+      case Fun(_, ULam(_, _, e)) => getAllVarReferences(e)
+      case Prim(_, e1, e2) => {
+        matchUVar(e1).union(matchUVar(e2))
+      }
+      case Begin(fs, e) => getAllVarReferences(fs(0))
+      case _ => Set()
     }
   }
 
@@ -259,6 +275,6 @@ object Main {
     println("let halt = x => console.log(x)\n")
     println(cps)
 
-    println(CPS.getAllVars(cps).toSet)
+    println(CPS.getAllVarReferences(cps))
   }
 }
