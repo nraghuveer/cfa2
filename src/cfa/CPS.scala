@@ -102,6 +102,26 @@ object CPS {
   def label = { lab_count = lab_count + 1; lab_count }
   def halt = KVar("halt")
 
+  def getAllVars(exp: Exp): List[String] = {
+    exp match {
+      case UVar(x: String) => List(x)
+      case KVar(_) => List()
+      case KLam(_, e) => getAllVars(e)
+      case ULam(xs, _, e) => xs.map(x => x.x) ++ getAllVars(e)
+      case KApp(_, arg, _) => getAllVars(arg)
+      case UApp(f, args, _, _) => args.map(i => getAllVars(i)).flatten
+      case TcUApp(f, args, _, _) => args.map(i => getAllVars(i)).flatten
+      case KLet(_, e1, e) => getAllVars(e1) ++ getAllVars(e)
+      case ULet(x, e1, e) => List(x.x) ++ getAllVars(e1) ++ getAllVars(e)
+      case If(b, theen, els) => getAllVars(b) ++ getAllVars(theen) ++ getAllVars(els)
+      case Update(x, e2, e) => getAllVars(x) ++ getAllVars(e2) ++ getAllVars(e)
+      case Fun(_, ulam) => getAllVars(ulam)
+      case Prim(op, e1, e2) => getAllVars(e1) ++ getAllVars(e2)
+      case Begin(fs, e) => fs.map(getAllVars(_)).flatten ++ getAllVars(e)
+      case _ => List()
+    }
+  }
+
   def t_k (stmts: List[Statement], kmap: Map[String, AExp => CExp], k: AExp => CExp): CExp =
     stmts match {
       case Nil => k(Void)
@@ -113,22 +133,20 @@ object CPS {
   // if 'k' is 'x => c(x)', then 'h(c)' else 'let c = x => k(x) in h(c)'
   def check_tail(x: UVar, k: AExp => CExp, h: KVar => CExp) = {
     k(x) match {
-      // This is a tail call, not a continuation call, so pass the current continuation to the tail call as continuation
       case KApp(c@KVar(_), y, _) if x == y => h(c) match {
           // If this is a UApp, convert to Tailcall UApp
-        case  UApp(f, args, k, label) => TcUApp(f, args, k, label)
-        case _ => h(c)
+          // Dont convert the klet, because, that is a continuation not return
+        case  UApp(f, args, k1, label) => TcUApp(f, args, k1, label)
+        case ULet(x1, e1, UApp(f, args, k1, label)) => ULet(x1, e1, TcUApp(f, args, k1, label))
+        case _ => h(c) // else dont tag as Tailcall
       }
     	case _ => {
         val c = KVar(gensym("k"))
-        KLet(c, KLam(x, k(x) match { // Inner kApp can be a tail call of the uapp, so convert it too
+        KLet(c, KLam(x, k(x) match { // uapp inside the continuation can be tail-call
           case UApp(f, args, k, label) => TcUApp(f, args, k, label)
           case ULet(x, e1, UApp(f, args, k, label)) => ULet(x, e1, TcUApp(f, args, k, label))
           case _ => k(x)
-        }), h(c) match {
-          case ULet(x, e1, UApp(f, args, k, label)) => ULet(x, e1, TcUApp(f, args, k, label))
-          case _ => h(c)
-        })
+        }), h(c))
     	}
     }
   }
@@ -227,15 +245,20 @@ object CPS {
       }
       case _ => throw new Exception("wrong argument in call to m: " + exp)
   }
+
+
+
 }
 
 
 object Main {
   def main(args: Array[String]) {
-    val ast = GenerateAST(new File("test/twice.js"))
+    val ast = GenerateAST(new File("test/fact1.js"))
     val cps = CPS.t_c(ast, Map(), CPS.halt)
     cps.prep
     println("let halt = x => console.log(x)\n")
     println(cps)
+
+    println(CPS.getAllVars(cps).toSet)
   }
 }
